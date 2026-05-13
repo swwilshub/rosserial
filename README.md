@@ -25,22 +25,29 @@ web-flasher/           Static WebSerial flasher (M5)
 | Milestone | Scope                                         | State |
 |-----------|-----------------------------------------------|-------|
 | M1        | Wire protocol spec + host codec + tests       | done  |
-| M2        | Firmware codec on the linux target, in CI     | next  |
+| M2        | Firmware codec on the linux target, in CI     | done  |
 | M3        | First bring-up: ESP32-S3 publisher            | …     |
 | M4        | Subscriber + reconnect + WiFi                 | …     |
 | M5        | Web flasher pipeline end-to-end               | …     |
 | M6        | ESP-NOW + multi-device demo                   | …     |
 
-## Quick start (M1, host only)
+## Quick start
 
 ```
-make install-bridge
-make test
+make install-bridge   # one-time: pip install -e ros2-bridge[test,dev]
+make test             # runs Python + C++ codec test suites
 ```
+
+Components individually:
+
+- `make test-bridge` — Python (pytest + Hypothesis)
+- `make test-fw` — C++ (CMake + Catch2 v3, fetched on first build)
 
 ## Documents
 
 - `docs/adr/0001-architecture-split.md` — dumb firmware, smart bridge
 - `docs/adr/0002-wire-protocol-v1.md` — framing, CRC, resync
 - `docs/adr/0003-simplicity-charter.md` — what we don't build
+- `docs/adr/0004-cpp-codec-parity.md` — how the two codecs stay in step
+- `docs/adr/0005-memory-policy.md` — no heap in steady state
 - `docs/wire-protocol.md` — implementer reference
