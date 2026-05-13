@@ -3,3 +3,15 @@
 rosserial_server/doc/
 *.out
 *.geany
+
+# rosserial2 tooling
+__pycache__/
+.pytest_cache/
+.hypothesis/
+*.egg-info/
+.venv/
+build/
+dist/
+.coverage
+htmlcov/
+.ruff_cache/

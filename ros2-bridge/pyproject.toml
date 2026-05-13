@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rosserial2"
+version = "0.1.0"
+description = "rosserial-style bridge for ESP32 and ROS2"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "BSD-3-Clause" }
+authors = [{ name = "rosserial2 contributors" }]
+dependencies = [
+    "pyserial>=3.5",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.4",
+    "hypothesis>=6.100",
+    "pytest-cov>=4.1",
+]
+dev = [
+    "ruff>=0.5",
+]
+
+[project.scripts]
+rosserial2-bridge = "rosserial2.bridge_node:main"
+
+[tool.setuptools.packages.find]
+include = ["rosserial2*"]
+exclude = ["tests*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+
+[tool.coverage.run]
+source = ["rosserial2"]
+omit = ["rosserial2/bridge_node.py", "rosserial2/transports/serial.py"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]
