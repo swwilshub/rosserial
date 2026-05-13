@@ -1,0 +1,60 @@
+name: HIL
+
+# Hardware-in-the-loop job. Requires a self-hosted runner with an
+# ESP32-S3 and a USB-serial loopback (see docs/hil-setup.md).
+#
+# Gated explicitly: never runs on fork PRs, and is opt-in via the
+# ``esp32-s3`` runner label. Skips quietly otherwise so a missing
+# runner can't block merges into other workflows.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [labeled, synchronize, opened]
+  workflow_dispatch:
+
+jobs:
+  hil:
+    name: ESP32-S3 smoke
+    # Only attempt on the main branch or when the ``run-hil`` label is
+    # explicitly applied to a PR.
+    if: >
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       contains(github.event.pull_request.labels.*.name, 'run-hil') &&
+       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, esp32-s3]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify runner has hardware attached
+        run: |
+          test -n "$ROSSERIAL2_HIL_PORT" || { echo "ROSSERIAL2_HIL_PORT not set on runner"; exit 1; }
+          test -e "$ROSSERIAL2_HIL_PORT"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install bridge
+        run: pip install -e 'ros2-bridge[test]'
+
+      - name: Build firmware (hello_publisher)
+        run: |
+          source "$IDF_PATH/export.sh"
+          cd esp32-firmware/examples/hello_publisher
+          idf.py set-target esp32s3
+          idf.py build
+
+      - name: Flash
+        run: |
+          source "$IDF_PATH/export.sh"
+          cd esp32-firmware/examples/hello_publisher
+          idf.py -p "$ROSSERIAL2_HIL_PORT" flash
+
+      - name: Smoke test
+        run: python ros2-bridge/tests/hil/smoke_counter.py --port "$ROSSERIAL2_HIL_PORT"

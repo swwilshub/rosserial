@@ -58,15 +58,36 @@ def test_advertise_after_hello_is_accepted() -> None:
     adv = Advertise(
         topic_id=7,
         direction=Direction.PUBLISH,
-        type_str="std_msgs/msg/String",
-        name="chatter",
+        type_str="std_msgs/msg/Int32",
+        name="counter",
     )
     [af] = parser.feed(encode_frame(1, CONTROL_MSG_ID, adv.encode()))
     s.on_frame(af)
     assert 7 in s.topics
-    assert s.topics[7].name == "chatter"
+    assert s.topics[7].name == "counter"
     [ack] = _drain_control(s)
     assert isinstance(ack, AdvertiseAck) and ack.accepted == 1
+
+
+def test_advertise_unknown_type_is_rejected_with_log() -> None:
+    s = Session()
+    parser = FrameParser()
+    [hf] = parser.feed(_hello_bytes())
+    s.on_frame(hf)
+    s.drain_outbox()
+    adv = Advertise(
+        topic_id=8,
+        direction=Direction.PUBLISH,
+        type_str="weirdpkg/msg/Unknown",
+        name="ghost",
+    )
+    [af] = parser.feed(encode_frame(1, CONTROL_MSG_ID, adv.encode()))
+    s.on_frame(af)
+    assert 8 not in s.topics
+    replies = _drain_control(s)
+    # ADVERTISE_ACK accepted=0 plus a LOG line.
+    acks = [m for m in replies if isinstance(m, AdvertiseAck)]
+    assert acks and acks[0].accepted == 0
 
 
 def test_advertise_before_hello_is_rejected() -> None:
@@ -100,12 +121,17 @@ def test_ping_replies_with_pong_carrying_same_nonce() -> None:
 def test_seq_skip_counter() -> None:
     s = Session()
     parser = FrameParser()
+    # HELLO resets rx tracking (reconnect path), so we establish a
+    # baseline with the first PING after HELLO.
     [hf] = parser.feed(_hello_bytes(seq=0))
     s.on_frame(hf)
     s.drain_outbox()
-    # Jump from seq=0 to seq=5: 4-frame skip → 1 skip event recorded.
-    [pf] = parser.feed(encode_frame(5, CONTROL_MSG_ID, Ping(nonce=1).encode()))
-    s.on_frame(pf)
+    [p1] = parser.feed(encode_frame(1, CONTROL_MSG_ID, Ping(nonce=1).encode()))
+    s.on_frame(p1)
+    s.drain_outbox()
+    # Jump from seq=1 to seq=6 → one skip event.
+    [p2] = parser.feed(encode_frame(6, CONTROL_MSG_ID, Ping(nonce=2).encode()))
+    s.on_frame(p2)
     assert s.rx_seq_skips == 1
 
 

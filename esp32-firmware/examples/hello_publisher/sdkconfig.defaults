@@ -1,0 +1,8 @@
+# Default config for the hello_publisher example.
+# Override with `idf.py menuconfig` for a specific board.
+
+CONFIG_IDF_TARGET="esp32s3"
+CONFIG_FREERTOS_HZ=1000
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
