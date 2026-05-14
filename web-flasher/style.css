@@ -131,6 +131,41 @@ button.secondary { background: transparent; color: var(--accent); border: 1px so
     margin-top: 0.5rem;
 }
 
+.byo-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+}
+.byo-controls select { font-size: 0.95rem; padding: 0.25rem; }
+
+.byo-rows {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+}
+.byo-rows th, .byo-rows td {
+    padding: 0.3rem 0.4rem;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+}
+.byo-rows th { color: var(--muted); font-weight: 500; font-size: 0.8rem; }
+.byo-rows input[type="text"] {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    padding: 0.25rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box;
+}
+.byo-rows .row-remove { padding: 0.1rem 0.5rem; }
+
+.byo-error { min-height: 1.25rem; font-size: 0.85rem; }
+.byo-log { height: 12rem; }
+
 footer {
     color: var(--muted);
     text-align: center;

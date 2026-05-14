@@ -3,6 +3,7 @@
 
 import { loadManifest } from "./manifest.js";
 import { ConsoleSession } from "./console.js";
+import { mountByo } from "./byo.js";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -202,4 +203,12 @@ window.addEventListener("DOMContentLoaded", () => {
     });
     $("#console-connect").addEventListener("click", onConsoleConnect);
     $("#console-disconnect").addEventListener("click", onConsoleDisconnect);
+    mountByo({
+        container: $("#byo-container"),
+        onFlash: async (entries, log) => {
+            // Lazy import so esptool-js only loads when needed.
+            const { flashLocalFiles } = await import("./flasher.js");
+            await flashLocalFiles(entries, log);
+        },
+    });
 });

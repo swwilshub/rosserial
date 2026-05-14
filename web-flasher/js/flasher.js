@@ -26,6 +26,7 @@ async function fetchBin(url) {
 
 /**
  * Flash a manifest variant. Calls onLog(line) for each progress update.
+ * Verifies the aggregate fwHash before writing.
  */
 export async function flashVariant(variant, onLog) {
     const log = (line) => { onLog?.(line); console.log("[flash]", line); };
@@ -45,7 +46,6 @@ export async function flashVariant(variant, onLog) {
         concatLen += data.length;
     }
 
-    // Verify the aggregate firmware hash before flashing anything.
     const concat = new Uint8Array(concatLen);
     let off = 0;
     for (const { data } of fileBytes) {
@@ -60,9 +60,26 @@ export async function flashVariant(variant, onLog) {
     }
     log(`fwHash verified: ${aggregate}`);
 
+    await flashRawFiles(fileBytes, log);
+}
+
+/**
+ * Flash a list of pre-loaded files at given offsets. Used by both
+ * the manifest path (after fetch+verify) and the bring-your-own
+ * firmware path (after the user picks local files).
+ *
+ * @param {{data: Uint8Array, offset: number}[]} fileBytes
+ * @param {(line: string)=>void} onLog
+ */
+export async function flashRawFiles(fileBytes, onLog) {
+    const log = (line) => { onLog?.(line); console.log("[flash]", line); };
     if (!("serial" in navigator)) {
         throw new Error("WebSerial not available in this browser");
     }
+    if (fileBytes.length === 0) {
+        throw new Error("no files to flash");
+    }
+
     const port = await navigator.serial.requestPort();
     log("port selected; loading esptool-js…");
     const { ESPLoader, Transport } = await loadEsptool();
@@ -102,6 +119,42 @@ export async function flashVariant(variant, onLog) {
     await loader.after();
     await transport.disconnect();
     log("flash complete.");
+}
+
+/**
+ * Flash files from local File objects (from <input type="file"> or
+ * drag-and-drop). Each entry pairs a File with a hex offset string.
+ *
+ * @param {{file: File, offset: string}[]} entries
+ * @param {(line: string)=>void} onLog
+ */
+export async function flashLocalFiles(entries, onLog) {
+    const log = (line) => { onLog?.(line); console.log("[flash]", line); };
+    const fileBytes = [];
+    for (const e of entries) {
+        if (!e.file) throw new Error("no file selected for one of the rows");
+        const offset = parseHexOffset(e.offset);
+        const buf = new Uint8Array(await e.file.arrayBuffer());
+        log(`loaded ${e.file.name} (${buf.length} bytes) → 0x${offset.toString(16)}`);
+        fileBytes.push({ data: buf, offset });
+    }
+    // Sort by offset; esptool-js requires ascending address order.
+    fileBytes.sort((a, b) => a.offset - b.offset);
+    await flashRawFiles(fileBytes, log);
+}
+
+/** Parse a hex offset string ("0x10000", "10000", or "0X..."). */
+export function parseHexOffset(s) {
+    if (typeof s !== "string") throw new Error("offset must be a string");
+    const trimmed = s.trim();
+    if (!/^0[xX]?[0-9a-fA-F]+$/.test(trimmed) && !/^[0-9a-fA-F]+$/.test(trimmed)) {
+        throw new Error(`offset not a hex number: ${s}`);
+    }
+    const v = parseInt(trimmed, 16);
+    if (!Number.isFinite(v) || v < 0) {
+        throw new Error(`offset out of range: ${s}`);
+    }
+    return v;
 }
 
 // esptool-js expects each file's data as a binary string. Avoid
