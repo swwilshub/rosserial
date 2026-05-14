@@ -78,3 +78,65 @@ def test_string_rejects_truncated() -> None:
         conv.unpack(b"\x05\x00\x00\x00ab")  # claims 5, has 2
     with pytest.raises(ConverterError):
         conv.unpack(b"\x00\x00")  # no header
+
+
+def test_registry_knows_bool_and_float32() -> None:
+    assert "std_msgs/msg/Bool" in converters.known_types()
+    assert "std_msgs/msg/Float32" in converters.known_types()
+
+
+@given(value=st.booleans())
+def test_bool_roundtrip(value: bool) -> None:
+    from rosserial2.converters import BoolConverter
+
+    conv = BoolConverter()
+    assert conv.unpack(conv.pack(value)) is value
+
+
+def test_bool_wire_bytes() -> None:
+    from rosserial2.converters import BoolConverter
+
+    conv = BoolConverter()
+    assert conv.pack(True) == b"\x01"
+    assert conv.pack(False) == b"\x00"
+    # Any non-zero byte unpacks as True (defensive, mirrors Bool semantics).
+    assert conv.unpack(b"\x7f") is True
+
+
+def test_bool_rejects_bad_length() -> None:
+    from rosserial2.converters import BoolConverter
+
+    conv = BoolConverter()
+    with pytest.raises(ConverterError):
+        conv.unpack(b"")
+    with pytest.raises(ConverterError):
+        conv.unpack(b"\x00\x00")
+
+
+@given(value=st.floats(allow_nan=False, allow_infinity=False, width=32))
+def test_float32_roundtrip(value: float) -> None:
+    from rosserial2.converters import Float32Converter
+
+    conv = Float32Converter()
+    got = conv.unpack(conv.pack(value))
+    # Float32 may quantize at the edges; the pack round-trip should be exact
+    # because we already restricted the input to 32-bit-representable floats.
+    assert got == value
+
+
+def test_float32_wire_bytes() -> None:
+    from rosserial2.converters import Float32Converter
+
+    conv = Float32Converter()
+    # 1.0f in IEEE 754 single = 0x3F800000 (little-endian → 00 00 80 3F)
+    assert conv.pack(1.0) == b"\x00\x00\x80\x3f"
+
+
+def test_float32_rejects_bad_length() -> None:
+    from rosserial2.converters import Float32Converter
+
+    conv = Float32Converter()
+    with pytest.raises(ConverterError):
+        conv.unpack(b"\x00\x00\x00")
+    with pytest.raises(ConverterError):
+        conv.unpack(b"\x00\x00\x00\x00\x00")

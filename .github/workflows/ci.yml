@@ -23,6 +23,8 @@ jobs:
         run: cd ros2-bridge && ruff check .
       - name: Tests with coverage
         run: cd ros2-bridge && pytest --cov=rosserial2 --cov-report=term-missing
+      - name: Tools tests (manifest builder)
+        run: pytest tools/tests/
 
   firmware-codec:
     name: firmware codec (host build + parity)

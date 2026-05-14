@@ -18,10 +18,13 @@ help:
 	@echo "  make corpus         # regenerate cross-language corpus"
 	@echo "  make install-bridge # pip install -e ros2-bridge[test]"
 
-test: test-bridge test-fw test-web
+test: test-bridge test-fw test-web test-tools
 
 test-web:
 	cd web-flasher && npm test
+
+test-tools:
+	python -m pytest tools/tests/
 
 serve-web:
 	cd web-flasher && npm run serve

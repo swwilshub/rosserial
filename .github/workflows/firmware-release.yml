@@ -1,0 +1,123 @@
+name: Firmware release
+
+# Builds every (board, example, transport) variant in matrix, attaches
+# the bins to the GitHub Release, regenerates the web-flasher manifest
+# pointing at the release URLs, and commits the manifest update.
+#
+# Trigger: pushing a tag of the form ``v*`` (semantic-release does this
+# for the bridge and flasher; firmware artifacts ride the same tag).
+# Also runnable manually via workflow_dispatch.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "release tag to attach artifacts to"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.example }} (${{ matrix.board }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { board: esp32s3, example: hello_publisher,  transport: serial }
+          - { board: esp32s3, example: espnow_publisher, transport: espnow }
+          - { board: esp32s3, example: espnow_gateway,   transport: serial }
+    container:
+      image: espressif/idf:v5.3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        shell: bash
+        run: |
+          . $IDF_PATH/export.sh
+          cd esp32-firmware/examples/${{ matrix.example }}
+          idf.py set-target ${{ matrix.board }}
+          idf.py build
+      - name: Stage artifacts
+        run: |
+          OUT=staging/${{ matrix.board }}/${{ matrix.example }}/${{ matrix.transport }}
+          mkdir -p "$OUT"
+          BUILD=esp32-firmware/examples/${{ matrix.example }}/build
+          cp "$BUILD/bootloader/bootloader.bin"     "$OUT/" || true
+          cp "$BUILD/partition_table/partition-table.bin" "$OUT/" || true
+          cp "$BUILD"/*.bin "$OUT/" || true
+          cp "$BUILD/flash_args" "$OUT/flash_args"
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fw-${{ matrix.board }}-${{ matrix.example }}-${{ matrix.transport }}
+          path: staging
+          retention-days: 7
+
+  publish:
+    name: Attach to Release + update manifest
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Flatten artifact layout
+        run: |
+          mkdir -p staging
+          # Each downloaded artifact already contains the
+          # <board>/<example>/<transport>/ structure under staging/.
+          find artifacts -mindepth 1 -maxdepth 1 -type d -exec cp -R {}/. staging/ \;
+      - name: Compute tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+      - name: Upload bins to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=${{ steps.tag.outputs.tag }}
+          gh release view "$TAG" > /dev/null 2>&1 || gh release create "$TAG" --notes "Firmware artifacts"
+          find staging -type f \( -name '*.bin' -o -name 'flash_args' \) \
+            | while read -r f; do
+                relpath="${f#staging/}"
+                renamed="${relpath//\//__}"
+                cp "$f" "/tmp/$renamed"
+                gh release upload "$TAG" "/tmp/$renamed" --clobber
+              done
+      - name: Build manifest
+        run: |
+          TAG=${{ steps.tag.outputs.tag }}
+          REPO=${{ github.repository }}
+          BASE="https://github.com/${REPO}/releases/download/${TAG}"
+          # Manifest URLs use __-separated names matching the upload step.
+          python tools/build_manifest.py \
+            --artifacts staging \
+            --release-tag "$TAG" \
+            --commit-sha "$GITHUB_SHA" \
+            --ci-run-url "https://github.com/${REPO}/actions/runs/${GITHUB_RUN_ID}" \
+            --generated-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --url-base "$BASE" \
+            --out web-flasher/manifest.json
+      - name: Commit manifest back to repo
+        run: |
+          git config user.name "rosserial2-bot"
+          git config user.email "bot@example.invalid"
+          if ! git diff --quiet web-flasher/manifest.json; then
+            git add web-flasher/manifest.json
+            git commit -m "chore(manifest): update for ${{ steps.tag.outputs.tag }}"
+            git push origin HEAD:main
+          fi

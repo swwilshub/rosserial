@@ -30,6 +30,19 @@ web-flasher/           Static WebSerial flasher (M5)
 | M4        | Subscriber + reconnect + WiFi                 | done  |
 | M5        | Web flasher + WebSerial console               | done  |
 | M6        | ESP-NOW + multi-device demo                   | done  |
+| polish    | More converters + manifest builder + release  | done  |
+
+## Supported message types (M6+)
+
+The bridge ships converters for:
+
+- `std_msgs/msg/Bool` — 1 byte
+- `std_msgs/msg/Int32` — 4 bytes LE
+- `std_msgs/msg/Float32` — IEEE 754 32-bit LE
+- `std_msgs/msg/String` — `uint32` LE length + UTF-8 bytes
+
+Adding a type is one Python class in
+`ros2-bridge/rosserial2/converters.py` plus a test. See ADR-0006.
 | M5        | Web flasher pipeline end-to-end               | …     |
 | M6        | ESP-NOW + multi-device demo                   | …     |
 

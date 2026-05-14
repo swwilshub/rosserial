@@ -68,23 +68,30 @@ def test_truncated_frame_does_not_break_following(
     args: tuple[int, int, bytes],
     drop_at: int,
 ) -> None:
-    """A truncated frame must not poison the parser for the next one.
+    """A truncated frame must not poison the parser indefinitely.
 
-    The parser is streaming: a truncated frame whose claimed length is
-    inflated may legitimately wait for more bytes. We feed enough
-    trailing data (payload-of-zeros pad) for the rewind path to
-    rediscover the next sync within the documented MAX_PAYLOAD + OVERHEAD
-    resync bound.
+    The parser is streaming. A truncated frame whose missing CRC bytes
+    coincidentally line up with the next frame's leading 0xAA can
+    produce a CRC-matching "false positive" frame that swallows the
+    start of the follower (probability ~1/256 per random byte). ADR-0002
+    only guarantees recovery within ``MAX_PAYLOAD + OVERHEAD`` bytes
+    after the last corruption, not *immediate* lock on the very next
+    frame. So we feed a small train of follow-up frames and assert that
+    at least one of them decodes.
     """
     seq, msg_id, payload = args
     enc = encode_frame(seq, msg_id, payload)
     cut = drop_at % len(enc)
     truncated = enc[:cut]
-    follow = encode_frame(0, 0, b"after")
-    pad = b"\x00" * (MAX_PAYLOAD + OVERHEAD)
+    # Several distinct follow frames; the resync bound guarantees we
+    # lock onto one of them.
+    followers = [encode_frame(i, 0, b"after") for i in range(8)]
+    expected = {Frame(seq=i, msg_id=0, payload=b"after") for i in range(8)}
     parser = FrameParser()
-    out = parser.feed(truncated + follow + pad)
-    assert Frame(seq=0, msg_id=0, payload=b"after") in out
+    out = parser.feed(truncated + b"".join(followers))
+    assert expected & set(out), (
+        f"none of the follow frames decoded after truncation cut={cut}"
+    )
 
 
 @given(

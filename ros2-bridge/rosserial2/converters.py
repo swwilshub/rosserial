@@ -72,7 +72,39 @@ class StringConverter:
         return payload[4:].decode("utf-8")
 
 
+@dataclass(frozen=True)
+class BoolConverter:
+    """Packed layout: ``uint8`` (0 or 1)."""
+
+    type_str: str = "std_msgs/msg/Bool"
+
+    def pack(self, value: Any) -> bytes:
+        return bytes([1 if bool(value) else 0])
+
+    def unpack(self, payload: bytes) -> bool:
+        if len(payload) != 1:
+            raise ConverterError(f"Bool payload must be 1 byte, got {len(payload)}")
+        return payload[0] != 0
+
+
+@dataclass(frozen=True)
+class Float32Converter:
+    """Packed layout: ``float32 LE`` (IEEE 754)."""
+
+    type_str: str = "std_msgs/msg/Float32"
+
+    def pack(self, value: Any) -> bytes:
+        return struct.pack("<f", float(value))
+
+    def unpack(self, payload: bytes) -> float:
+        if len(payload) != 4:
+            raise ConverterError(f"Float32 payload must be 4 bytes, got {len(payload)}")
+        return struct.unpack("<f", payload)[0]
+
+
 _REGISTRY: dict[str, Converter] = {
+    BoolConverter.type_str: BoolConverter(),
+    Float32Converter.type_str: Float32Converter(),
     Int32Converter.type_str: Int32Converter(),
     StringConverter.type_str: StringConverter(),
 }
