@@ -1,0 +1,81 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "rosserial2 web-flasher manifest",
+    "type": "object",
+    "required": ["wireVersion", "variants"],
+    "properties": {
+        "wireVersion": {
+            "type": "integer",
+            "description": "Pinned to the wire protocol version this manifest's firmware speaks."
+        },
+        "generatedAt": {
+            "type": ["string", "null"],
+            "description": "ISO-8601 timestamp when the manifest was produced by CI."
+        },
+        "releaseTag": {
+            "type": ["string", "null"],
+            "description": "GitHub release tag the binaries belong to."
+        },
+        "commitSha": {
+            "type": ["string", "null"],
+            "description": "Commit SHA the firmware was built from."
+        },
+        "ciRunUrl": {
+            "type": ["string", "null"],
+            "description": "URL of the CI run that produced the binaries."
+        },
+        "variants": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["board", "transport", "example", "files", "fwHash"],
+                "properties": {
+                    "board": {
+                        "type": "string",
+                        "description": "ESP32 family target (e.g. esp32s3)."
+                    },
+                    "transport": {
+                        "type": "string",
+                        "enum": ["serial", "tcp", "espnow"]
+                    },
+                    "example": {
+                        "type": "string",
+                        "description": "Example program name (e.g. hello_publisher)."
+                    },
+                    "label": {
+                        "type": "string",
+                        "description": "Display label for the variant."
+                    },
+                    "fwHash": {
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{64}$",
+                        "description": "SHA-256 of the concatenated firmware bins."
+                    },
+                    "files": {
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                            "type": "object",
+                            "required": ["url", "offset"],
+                            "properties": {
+                                "url": {
+                                    "type": "string",
+                                    "description": "Absolute or relative URL to the .bin file."
+                                },
+                                "offset": {
+                                    "type": "string",
+                                    "pattern": "^0x[0-9a-fA-F]+$",
+                                    "description": "Flash offset, hex with 0x prefix."
+                                },
+                                "sha256": {
+                                    "type": "string",
+                                    "pattern": "^[0-9a-f]{64}$"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

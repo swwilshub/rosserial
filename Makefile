@@ -1,22 +1,30 @@
 # rosserial2 monorepo top-level entrypoints.
 # Keep these short. They wrap the per-component build.
 
-.PHONY: help test test-bridge test-fw fw-configure fw-build lint fmt golden corpus install-bridge clean
+.PHONY: help test test-bridge test-fw test-web fw-configure fw-build lint fmt golden corpus install-bridge serve-web clean
 
 FW_BUILD := esp32-firmware/host_test/build
 
 help:
 	@echo "rosserial2 — top-level make targets"
-	@echo "  make test           # run all host unit/property tests (Python + C++)"
+	@echo "  make test           # run all host tests (Python + C++ + JS)"
 	@echo "  make test-bridge    # run ros2-bridge tests only"
 	@echo "  make test-fw        # build and run C++ codec tests"
+	@echo "  make test-web       # run web-flasher JS tests"
+	@echo "  make serve-web      # serve web-flasher locally on :8080"
 	@echo "  make lint           # ruff check"
 	@echo "  make fmt            # ruff format"
 	@echo "  make golden         # regenerate golden frame snapshots"
 	@echo "  make corpus         # regenerate cross-language corpus"
 	@echo "  make install-bridge # pip install -e ros2-bridge[test]"
 
-test: test-bridge test-fw
+test: test-bridge test-fw test-web
+
+test-web:
+	cd web-flasher && npm test
+
+serve-web:
+	cd web-flasher && npm run serve
 
 test-bridge:
 	cd ros2-bridge && python -m pytest

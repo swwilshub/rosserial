@@ -1,0 +1,9 @@
+{
+    "$schema": "./manifest.schema.json",
+    "wireVersion": 1,
+    "generatedAt": null,
+    "releaseTag": null,
+    "commitSha": null,
+    "ciRunUrl": null,
+    "variants": []
+}

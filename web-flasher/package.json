@@ -1,0 +1,14 @@
+{
+    "name": "rosserial2-web-flasher",
+    "version": "0.1.0",
+    "description": "Browser-based ESP32 flasher and WebSerial console for rosserial2",
+    "type": "module",
+    "private": true,
+    "engines": {
+        "node": ">=20"
+    },
+    "scripts": {
+        "test": "node --test tests/*.test.js",
+        "serve": "python3 -m http.server 8080"
+    }
+}

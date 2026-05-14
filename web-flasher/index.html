@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>rosserial2 — Flash & Console</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <header>
+        <h1>rosserial2</h1>
+        <p>Plug in an ESP32. Click Flash. Open the Console.</p>
+    </header>
+
+    <noscript>
+        <p class="error">This page needs JavaScript.</p>
+    </noscript>
+
+    <section id="capability-check" class="card">
+        <h2>Browser capabilities</h2>
+        <ul>
+            <li>WebSerial: <span data-cap="webserial">checking…</span></li>
+            <li>Origin secure (HTTPS or localhost): <span data-cap="secure">checking…</span></li>
+        </ul>
+        <p class="hint">
+            WebSerial requires a Chromium-based browser (Chrome, Edge, Opera)
+            and an HTTPS or localhost origin.
+        </p>
+    </section>
+
+    <section id="manifest" class="card">
+        <h2>Firmware variants</h2>
+        <p id="manifest-meta" class="meta">loading manifest…</p>
+        <ul id="variants" class="variants"></ul>
+        <p class="hint">
+            The list above is fetched from <code>manifest.json</code>, which
+            CI produces and pins to a release tag. Variants show their
+            firmware hash and commit SHA before flashing.
+        </p>
+    </section>
+
+    <section id="flasher" class="card hidden">
+        <h2>Flash</h2>
+        <p>
+            Selected: <strong id="flash-selected">none</strong><br />
+            Hash: <code id="flash-hash"></code><br />
+            Commit: <code id="flash-commit"></code>
+            <span id="flash-ci-link"></span>
+        </p>
+        <button id="flash-button">Confirm flash</button>
+        <button id="flash-cancel">Cancel</button>
+        <pre id="flash-log" class="log"></pre>
+    </section>
+
+    <section id="console" class="card">
+        <h2>Console</h2>
+        <p>
+            Smoke-test a flashed device without installing ROS2. The
+            browser plays the bridge: it answers HELLO, accepts
+            ADVERTISE for known types, replies to PING, and prints
+            decoded traffic.
+        </p>
+        <button id="console-connect">Connect device (WebSerial)</button>
+        <button id="console-disconnect" disabled>Disconnect</button>
+        <div id="console-status" class="status">disconnected</div>
+        <div class="grid-2">
+            <div>
+                <h3>Topics</h3>
+                <ul id="console-topics" class="topics"></ul>
+            </div>
+            <div>
+                <h3>Traffic</h3>
+                <pre id="console-log" class="log"></pre>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>
+            <a href="https://github.com/swwilshub/rosserial">Source on GitHub</a>
+        </p>
+    </footer>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
