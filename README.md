@@ -29,7 +29,7 @@ web-flasher/           Static WebSerial flasher (M5)
 | M3        | First bring-up: ESP32-S3 publisher            | done  |
 | M4        | Subscriber + reconnect + WiFi                 | done  |
 | M5        | Web flasher + WebSerial console               | done  |
-| M6        | ESP-NOW + multi-device demo                   | next  |
+| M6        | ESP-NOW + multi-device demo                   | done  |
 | M5        | Web flasher pipeline end-to-end               | …     |
 | M6        | ESP-NOW + multi-device demo                   | …     |
 
@@ -57,5 +57,7 @@ Components individually:
 - `docs/adr/0008-reconnect-strategy.md` — session reset + transport reopen
 - `docs/adr/0009-web-flasher.md` — flash + console in the browser
 - `docs/adr/0010-js-codec-parity.md` — third codec; same corpus
+- `docs/adr/0011-espnow-transport.md` — leaf + gateway pattern
 - `docs/wire-protocol.md` — implementer reference
 - `docs/hil-setup.md` — hardware-in-the-loop runner setup
+- `docs/multi-device-demo.md` — ESP-NOW two-leaf walk-through

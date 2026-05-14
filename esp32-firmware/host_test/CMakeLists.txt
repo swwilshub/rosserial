@@ -42,6 +42,7 @@ add_executable(test_codec
     tests/test_resync.cpp
     tests/test_control.cpp
     tests/test_parity.cpp
+    tests/test_leaf_client.cpp
 )
 target_link_libraries(test_codec PRIVATE rosserial2_codec Catch2::Catch2WithMain)
 target_compile_options(test_codec PRIVATE ${ROSSERIAL2_STRICT_FLAGS})
