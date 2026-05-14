@@ -49,8 +49,32 @@ class Int32Converter:
         return struct.unpack("<i", payload)[0]
 
 
+@dataclass(frozen=True)
+class StringConverter:
+    """Packed layout: ``uint32 length (LE) | UTF-8 bytes``."""
+
+    type_str: str = "std_msgs/msg/String"
+
+    def pack(self, value: Any) -> bytes:
+        data = value if isinstance(value, bytes) else str(value).encode("utf-8")
+        if len(data) > 0xFFFFFFFF:
+            raise ConverterError(f"String too large: {len(data)} bytes")
+        return struct.pack("<I", len(data)) + data
+
+    def unpack(self, payload: bytes) -> str:
+        if len(payload) < 4:
+            raise ConverterError(f"String payload < 4 bytes: {len(payload)}")
+        (length,) = struct.unpack("<I", payload[:4])
+        if len(payload) != 4 + length:
+            raise ConverterError(
+                f"String length mismatch: header says {length}, body has {len(payload) - 4}"
+            )
+        return payload[4:].decode("utf-8")
+
+
 _REGISTRY: dict[str, Converter] = {
     Int32Converter.type_str: Int32Converter(),
+    StringConverter.type_str: StringConverter(),
 }
 
 

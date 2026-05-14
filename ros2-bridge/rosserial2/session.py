@@ -41,6 +41,7 @@ class SessionState(Enum):
 # ``on_data``: a payload arrived for a known device-publish topic.
 OnAdvertise = Callable[["TopicEntry"], bool]
 OnData = Callable[["TopicEntry", bytes], None]
+OnReset = Callable[[], None]
 
 
 @dataclass
@@ -56,6 +57,7 @@ class Session:
     proto_ver: int = 1
     on_advertise: OnAdvertise | None = None
     on_data: OnData | None = None
+    on_reset: OnReset | None = None
     state: SessionState = SessionState.AWAIT_HELLO
     session_id: int = 0
     device_id: bytes = b""
@@ -110,7 +112,11 @@ class Session:
 
     def _handle_hello(self, msg: Hello) -> None:
         # Any HELLO resets the session — that is also the reconnect
-        # path (ADR-0002 + ADR-0001).
+        # path (ADR-0002 + ADR-0001). If the session was already
+        # READY, notify the host so it can tear down per-topic
+        # resources (publishers, subscriptions).
+        if self.state is SessionState.READY and self.on_reset is not None:
+            self.on_reset()
         self.topics.clear()
         self._rx_seq_last = None
         self.device_id = msg.device_id

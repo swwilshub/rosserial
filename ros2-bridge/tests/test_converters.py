@@ -48,3 +48,33 @@ def test_int32_known_bytes() -> None:
     assert conv.pack(1) == b"\x01\x00\x00\x00"
     assert conv.pack(-1) == b"\xff\xff\xff\xff"
     assert conv.pack(0x12345678) == b"\x78\x56\x34\x12"
+
+
+def test_registry_knows_string() -> None:
+    assert "std_msgs/msg/String" in converters.known_types()
+
+
+@given(text=st.text(max_size=1024))
+def test_string_roundtrip(text: str) -> None:
+    from rosserial2.converters import StringConverter
+
+    conv = StringConverter()
+    assert conv.unpack(conv.pack(text)) == text
+
+
+def test_string_known_bytes() -> None:
+    from rosserial2.converters import StringConverter
+
+    conv = StringConverter()
+    assert conv.pack("hi") == b"\x02\x00\x00\x00hi"
+    assert conv.pack("") == b"\x00\x00\x00\x00"
+
+
+def test_string_rejects_truncated() -> None:
+    from rosserial2.converters import StringConverter
+
+    conv = StringConverter()
+    with pytest.raises(ConverterError):
+        conv.unpack(b"\x05\x00\x00\x00ab")  # claims 5, has 2
+    with pytest.raises(ConverterError):
+        conv.unpack(b"\x00\x00")  # no header

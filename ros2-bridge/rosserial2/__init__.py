@@ -1,7 +1,7 @@
 """rosserial2 — host-side bridge for the ESP32 ↔ ROS2 wire protocol."""
 
 from rosserial2 import codec, control, converters
-from rosserial2.bridge import BridgeLoop, PublisherFactory
+from rosserial2.bridge import BridgeLoop, PublisherFactory, SubscriptionFactory
 from rosserial2.codec import (
     CRC_SIZE,
     HEADER_SIZE,
@@ -13,6 +13,7 @@ from rosserial2.codec import (
     FrameParser,
     encode_frame,
 )
+from rosserial2.reconnect import ReconnectingTransport
 from rosserial2.session import Session, SessionState, TopicEntry
 
 __all__ = [
@@ -26,8 +27,10 @@ __all__ = [
     "FrameError",
     "FrameParser",
     "PublisherFactory",
+    "ReconnectingTransport",
     "Session",
     "SessionState",
+    "SubscriptionFactory",
     "TopicEntry",
     "codec",
     "control",

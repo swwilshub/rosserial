@@ -12,9 +12,11 @@ import importlib
 import logging
 import sys
 import threading
+from collections.abc import Callable
 from typing import Any
 
 from rosserial2.bridge import BridgeLoop
+from rosserial2.reconnect import ReconnectingTransport
 from rosserial2.transport import Transport
 
 logger = logging.getLogger("rosserial2.bridge_node")
@@ -22,19 +24,27 @@ logger = logging.getLogger("rosserial2.bridge_node")
 
 def _build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="rosserial2-bridge")
-    p.add_argument("--transport", default="serial", choices=["serial"])
-    p.add_argument("--port", default="/dev/ttyUSB0")
-    p.add_argument("--baud", type=int, default=921600)
+    p.add_argument("--transport", default="serial", choices=["serial", "tcp"])
+    p.add_argument("--port", default="/dev/ttyUSB0",
+                   help="serial device path (serial transport)")
+    p.add_argument("--baud", type=int, default=921600,
+                   help="serial baud rate")
+    p.add_argument("--tcp-host", default="0.0.0.0")
+    p.add_argument("--tcp-port", type=int, default=11411)
+    p.add_argument("--no-reconnect", action="store_true",
+                   help="disable the auto-reopen supervisor")
     p.add_argument("--log-level", default="INFO")
     return p
 
 
-def _open_transport(kind: str, port: str, baud: int) -> Transport:
-    if kind == "serial":
+def _make_open_fn(args) -> Callable[[], Transport]:  # type: ignore[type-arg]
+    if args.transport == "serial":
         from rosserial2.transports.serial import SerialTransport
-
-        return SerialTransport(port=port, baud=baud)
-    raise ValueError(f"unknown transport: {kind}")
+        return lambda: SerialTransport(port=args.port, baud=args.baud)
+    if args.transport == "tcp":
+        from rosserial2.transports.tcp import TcpServerTransport
+        return lambda: TcpServerTransport(host=args.tcp_host, port=args.tcp_port)
+    raise ValueError(f"unknown transport: {args.transport}")
 
 
 def _import_message_class(type_str: str) -> Any:
@@ -82,8 +92,27 @@ def main(argv: list[str] | None = None) -> int:
             type_str,
         )
 
-    transport = _open_transport(args.transport, args.port, args.baud)
-    loop = BridgeLoop(transport=transport, publisher_factory=publisher_factory)
+    def subscription_factory(type_str: str, topic_name: str,
+                             on_message: Callable[[object], None]):
+        if converters.get(type_str) is None:
+            return None
+        try:
+            msg_cls = _import_message_class(type_str)
+        except Exception as exc:
+            node.get_logger().error(f"cannot import {type_str}: {exc}")
+            return None
+        return node.create_subscription(msg_cls, topic_name, on_message, 10)
+
+    open_fn = _make_open_fn(args)
+    transport: Transport = (
+        open_fn() if args.no_reconnect
+        else ReconnectingTransport(open_fn=open_fn, label=args.transport)
+    )
+    loop = BridgeLoop(
+        transport=transport,
+        publisher_factory=publisher_factory,
+        subscription_factory=subscription_factory,
+    )
 
     # Drive the bridge loop in a background thread so rclpy.spin() can
     # own the main thread.

@@ -27,7 +27,8 @@ web-flasher/           Static WebSerial flasher (M5)
 | M1        | Wire protocol spec + host codec + tests       | done  |
 | M2        | Firmware codec on the linux target, in CI     | done  |
 | M3        | First bring-up: ESP32-S3 publisher            | done  |
-| M4        | Subscriber + reconnect + WiFi                 | next  |
+| M4        | Subscriber + reconnect + WiFi                 | done  |
+| M5        | Web flasher pipeline end-to-end               | next  |
 | M5        | Web flasher pipeline end-to-end               | …     |
 | M6        | ESP-NOW + multi-device demo                   | …     |
 
@@ -51,5 +52,7 @@ Components individually:
 - `docs/adr/0004-cpp-codec-parity.md` — how the two codecs stay in step
 - `docs/adr/0005-memory-policy.md` — no heap in steady state
 - `docs/adr/0006-payload-conversion.md` — bridge owns per-type converters
+- `docs/adr/0007-subscribe-path.md` — ROS2 → device via the same ADVERTISE op
+- `docs/adr/0008-reconnect-strategy.md` — session reset + transport reopen
 - `docs/wire-protocol.md` — implementer reference
 - `docs/hil-setup.md` — hardware-in-the-loop runner setup
