@@ -49,6 +49,15 @@ async function renderManifest() {
         for (const v of m.variants) {
             const li = document.createElement("li");
             const label = v.label ?? `${v.board} · ${v.example} · ${v.transport}`;
+            const isPreview = v.preview === true || (v.files?.length ?? 0) === 0;
+            const desc = v.description
+                ? `<div class="sub">${escapeHtml(v.description)}</div>` : "";
+            const hashLine = isPreview
+                ? `<div class="sub preview-tag">⏳ preview — firmware not yet built; push a v* tag to populate</div>`
+                : `<div class="sub">fwHash <code>${escapeHtml(v.fwHash.substring(0, 12))}…</code></div>`;
+            const button = isPreview
+                ? `<button class="select" disabled title="Pending build">Pending build</button>`
+                : `<button class="select">Select</button>`;
             li.innerHTML = `
                 <div>
                     <div class="label">${escapeHtml(label)}</div>
@@ -57,11 +66,13 @@ async function renderManifest() {
                         transport=<code>${escapeHtml(v.transport)}</code>
                         example=<code>${escapeHtml(v.example)}</code>
                     </div>
-                    <div class="sub">fwHash <code>${v.fwHash.substring(0, 12)}…</code></div>
+                    ${desc}
+                    ${hashLine}
                 </div>
-                <button class="select">Select</button>
+                ${button}
             `;
-            li.querySelector("button").addEventListener("click", () => selectVariant(v, m));
+            const btn = li.querySelector("button");
+            if (!isPreview) btn.addEventListener("click", () => selectVariant(v, m));
             list.appendChild(li);
         }
     } catch (e) {

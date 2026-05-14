@@ -24,8 +24,13 @@ function validate(m) {
         for (const k of ["board", "transport", "example", "files", "fwHash"]) {
             if (!(k in v)) throw new Error(`variant missing key: ${k}`);
         }
-        if (!Array.isArray(v.files) || v.files.length === 0) {
-            throw new Error("variant.files must be a non-empty array");
+        if (!Array.isArray(v.files)) {
+            throw new Error("variant.files must be an array");
+        }
+        // A variant with no files is a "preview" entry (firmware not
+        // yet built). Real flashable variants need at least one file.
+        if (!v.preview && v.files.length === 0) {
+            throw new Error("variant.files must be non-empty unless preview=true");
         }
     }
     return m;

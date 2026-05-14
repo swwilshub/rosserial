@@ -5,5 +5,36 @@
     "releaseTag": null,
     "commitSha": null,
     "ciRunUrl": null,
-    "variants": []
+    "variants": [
+        {
+            "board": "esp32s3",
+            "example": "hello_publisher",
+            "transport": "serial",
+            "label": "ESP32-S3 · hello_publisher · serial",
+            "preview": true,
+            "description": "Publishes std_msgs/msg/Int32 'counter' over USB serial at 921600 baud.",
+            "fwHash": "0000000000000000000000000000000000000000000000000000000000000000",
+            "files": []
+        },
+        {
+            "board": "esp32s3",
+            "example": "espnow_publisher",
+            "transport": "espnow",
+            "label": "ESP32-S3 · espnow_publisher · ESP-NOW (leaf)",
+            "preview": true,
+            "description": "Same counter publisher, but transport is ESP-NOW. Pair with a gateway.",
+            "fwHash": "0000000000000000000000000000000000000000000000000000000000000000",
+            "files": []
+        },
+        {
+            "board": "esp32s3",
+            "example": "espnow_gateway",
+            "transport": "serial",
+            "label": "ESP32-S3 · espnow_gateway · serial",
+            "preview": true,
+            "description": "USB-tethered gateway: bridges ESP-NOW (towards leaves) to UART (towards the bridge).",
+            "fwHash": "0000000000000000000000000000000000000000000000000000000000000000",
+            "files": []
+        }
+    ]
 }

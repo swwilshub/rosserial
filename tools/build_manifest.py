@@ -144,8 +144,32 @@ def build_manifest(
     ci_run_url: str | None,
     generated_at: str | None,
     url_base: str,
+    merge_with: Path | None = None,
 ) -> dict[str, Any]:
     variants = scan_artifacts(artifacts_root)
+    built = [v.to_dict(url_base) for v in variants]
+
+    # If an existing manifest is passed via merge_with, keep any of its
+    # entries that do NOT collide with a freshly built (board, example,
+    # transport) tuple. This lets a partial CI build (e.g. only one
+    # board succeeded) preserve preview placeholders for the rest.
+    keep: list[dict[str, Any]] = []
+    if merge_with is not None and merge_with.exists():
+        try:
+            prev = json.loads(merge_with.read_text())
+            built_keys = {(v["board"], v["example"], v["transport"]) for v in built}
+            for v in prev.get("variants", []):
+                key = (v.get("board"), v.get("example"), v.get("transport"))
+                if key not in built_keys:
+                    keep.append(v)
+        except (OSError, json.JSONDecodeError):
+            # Ignore a missing or malformed prior manifest; CI runs
+            # with --merge-with on the checked-in file should always
+            # find it valid, but we don't fail the whole release if
+            # someone hand-edited it.
+            pass
+
+    merged = built + keep
     return {
         "$schema": "./manifest.schema.json",
         "wireVersion": 1,
@@ -153,7 +177,7 @@ def build_manifest(
         "releaseTag": release_tag,
         "commitSha": commit_sha,
         "ciRunUrl": ci_run_url,
-        "variants": [v.to_dict(url_base) for v in variants],
+        "variants": merged,
     }
 
 
@@ -170,6 +194,9 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                    help="URL prefix for firmware files in the manifest")
     p.add_argument("--out", type=Path, required=True,
                    help="output path (typically web-flasher/manifest.json)")
+    p.add_argument("--merge-with", type=Path, default=None,
+                   help="if given, preserve any variants from this prior "
+                        "manifest that weren't rebuilt (preview placeholders)")
     return p
 
 
@@ -185,6 +212,7 @@ def main(argv: list[str] | None = None) -> int:
         ci_run_url=args.ci_run_url,
         generated_at=args.generated_at,
         url_base=args.url_base.rstrip("/"),
+        merge_with=args.merge_with,
     )
     args.out.write_text(json.dumps(manifest, indent=2) + "\n")
     print(f"wrote {args.out} with {len(manifest['variants'])} variant(s)")

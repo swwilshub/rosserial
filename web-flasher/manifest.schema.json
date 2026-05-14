@@ -46,6 +46,14 @@
                         "type": "string",
                         "description": "Display label for the variant."
                     },
+                    "description": {
+                        "type": "string",
+                        "description": "Free-text description shown in the UI."
+                    },
+                    "preview": {
+                        "type": "boolean",
+                        "description": "If true, this variant is a placeholder; firmware not yet built."
+                    },
                     "fwHash": {
                         "type": "string",
                         "pattern": "^[0-9a-f]{64}$",
@@ -53,7 +61,6 @@
                     },
                     "files": {
                         "type": "array",
-                        "minItems": 1,
                         "items": {
                             "type": "object",
                             "required": ["url", "offset"],

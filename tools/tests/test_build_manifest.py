@@ -131,6 +131,60 @@ def test_main_rejects_missing_dir(tmp_path: Path) -> None:
     assert rc == 2
 
 
+def test_merge_with_preserves_unbuilt_previews(tmp_path: Path) -> None:
+    # Set up a prior manifest with two preview entries; the artifact
+    # tree only contains one matching variant. After merge, the other
+    # preview must survive.
+    prior = tmp_path / "manifest.json"
+    prior.write_text(json.dumps({
+        "wireVersion": 1,
+        "variants": [
+            {"board": "esp32s3", "example": "hello_publisher",
+             "transport": "serial", "preview": True,
+             "fwHash": "00" * 32, "files": []},
+            {"board": "esp32s3", "example": "espnow_gateway",
+             "transport": "serial", "preview": True,
+             "fwHash": "00" * 32, "files": []},
+        ],
+    }))
+    artifacts = tmp_path / "artifacts"
+    d = artifacts / "esp32s3" / "hello_publisher" / "serial"
+    d.mkdir(parents=True)
+    (d / "fw.bin").write_bytes(b"X" * 32)
+    (d / "flash_args").write_text("0x10000 fw.bin\n")
+
+    manifest = build_manifest(
+        artifacts_root=artifacts, release_tag="v1.0.0",
+        commit_sha=None, ci_run_url=None, generated_at=None,
+        url_base="..", merge_with=prior,
+    )
+
+    by_key = {(v["board"], v["example"], v["transport"]): v
+              for v in manifest["variants"]}
+    # The built one has real files now.
+    built = by_key[("esp32s3", "hello_publisher", "serial")]
+    assert len(built["files"]) == 1
+    assert built["files"][0]["url"].endswith("fw.bin")
+    # The other preview survived intact.
+    surviving = by_key[("esp32s3", "espnow_gateway", "serial")]
+    assert surviving.get("preview") is True
+    assert surviving["files"] == []
+
+
+def test_merge_with_missing_file_is_tolerated(tmp_path: Path) -> None:
+    artifacts = tmp_path / "artifacts"
+    d = artifacts / "esp32s3" / "hello_publisher" / "serial"
+    d.mkdir(parents=True)
+    (d / "fw.bin").write_bytes(b"Y")
+    (d / "flash_args").write_text("0x10000 fw.bin\n")
+    manifest = build_manifest(
+        artifacts_root=artifacts, release_tag=None,
+        commit_sha=None, ci_run_url=None, generated_at=None,
+        url_base=".", merge_with=tmp_path / "does_not_exist.json",
+    )
+    assert len(manifest["variants"]) == 1
+
+
 def test_main_skips_directory_without_flash_args(tmp_path: Path) -> None:
     # A directory tree where one variant has no flash_args is silently
     # skipped — keeps the script tolerant of partial CI uploads.

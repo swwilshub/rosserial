@@ -111,6 +111,7 @@ jobs:
             --ci-run-url "https://github.com/${REPO}/actions/runs/${GITHUB_RUN_ID}" \
             --generated-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --url-base "$BASE" \
+            --merge-with web-flasher/manifest.json \
             --out web-flasher/manifest.json
       - name: Commit manifest back to repo
         run: |
